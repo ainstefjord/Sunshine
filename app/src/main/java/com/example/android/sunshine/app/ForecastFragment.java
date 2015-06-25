@@ -1,6 +1,8 @@
 package com.example.android.sunshine.app;
 
 
+import android.content.Context;
+import android.content.Intent;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -13,8 +15,11 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Adapter;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
+import android.widget.Toast;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -73,6 +78,15 @@ public class ForecastFragment extends Fragment {
         // Get a reference to the ListView, and attach this adapter to it.
         ListView listView = (ListView) rootView.findViewById(R.id.listview_forecast);
         listView.setAdapter(mForecastAdapter);
+        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
+
+                Intent detailIntent = new Intent(getActivity(), DetailActivity.class);
+                detailIntent.putExtra(Intent.EXTRA_TEXT, mForecastAdapter.getItem(i));
+                startActivity(detailIntent);
+            }
+        });
 
         return rootView;
     }
@@ -96,7 +110,7 @@ public class ForecastFragment extends Fragment {
         if(id == R.id.action_refresh) {
 
             FetchWeatherTask weatherTask = new FetchWeatherTask();
-            weatherTask.execute("53715");
+            weatherTask.execute();
             return true;
         }
         return super.onOptionsItemSelected(item);
@@ -105,6 +119,8 @@ public class ForecastFragment extends Fragment {
     public class FetchWeatherTask extends AsyncTask<String, Void, String[]> {
 
         private final String LOG_TAG = FetchWeatherTask.class.getSimpleName();
+
+
 
         @Override
         protected String[] doInBackground(String... params) {
@@ -145,7 +161,6 @@ public class ForecastFragment extends Fragment {
 
                 URL url = new URL(builtUri.toString());
 
-                Log.v(LOG_TAG, "built URI " + builtUri.toString());
 
                 // Create the request to OpenWeatherMap, and open the connection
                 urlConnection = (HttpURLConnection) url.openConnection();
@@ -175,7 +190,7 @@ public class ForecastFragment extends Fragment {
                 }
                 forecastJsonStr = buffer.toString();
 
-                Log.v(LOG_TAG, "Forecast Json String: " + forecastJsonStr);
+
 
             } catch (IOException e) {
                 Log.e(LOG_TAG, "Error ", e);
@@ -199,10 +214,19 @@ public class ForecastFragment extends Fragment {
                 return getWeatherDataFromJson(forecastJsonStr, numDays);
             }
             catch (JSONException e) {
-                Log.v(LOG_TAG, e.getMessage(), e);
                 e.printStackTrace();
             }
             return null;
+        }
+
+        @Override
+        protected void onPostExecute(String[] result) {
+            if(result != null) {
+                mForecastAdapter.clear();
+                for(String s:result) {
+                    mForecastAdapter.add(s);
+                }
+            }
         }
 
 
@@ -278,10 +302,6 @@ public class ForecastFragment extends Fragment {
 
                 resultStrs[i] = day + " - " + description + " - " + highAndLow;
 
-            }
-
-            for(String s:resultStrs){
-                Log.v(LOG_TAG, "Forecast Entry. " + s);
             }
 
             return resultStrs;
